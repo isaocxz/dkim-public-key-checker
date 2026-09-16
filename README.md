@@ -109,7 +109,8 @@ current page session and is not stored or added to the page URL.
 - [Provider inference](DKIM-PROVIDER-INFERENCE.md): supported patterns and
   evidence used to identify a likely DKIM provider.
 - [Testing and regression cases](DKIM-VALIDATION-TEST-CASES.md): test methods,
-  DNS fixtures, and expected results.
+  DNS fixtures, and expected results. The machine-readable versions of these
+  fixtures are in [tests/fixtures/](tests/fixtures/).
 
 ## License
 

@@ -1,14 +1,14 @@
 # DKIM Public Key Checker Test Cases
 
 This document defines the human-readable test specification for the DNS
-records in `dkim-validation-test-zone.txt`.
+records in `tests/fixtures/dkim-validation-test-zone.txt`.
 
 ## Test Methods
 
 Logic tests require Node.js 24 LTS and npm. Install the development dependency
 from the committed lockfile, then run the tests:
 
-```powershell
+```bash
 npm ci
 npm test
 ```
@@ -26,9 +26,9 @@ Vitest, user-visible changes require browser testing, and DNS behavior changes
 require the DNS-backed regression cases below.
 
 DNS fixtures are provided in the Cloudflare-compatible BIND zone file
-[dkim-validation-test-zone.txt](dkim-validation-test-zone.txt). Machine-readable
+[tests/fixtures/dkim-validation-test-zone.txt](tests/fixtures/dkim-validation-test-zone.txt). Machine-readable
 expected results are in
-[dkim-validation-expected-results.tsv](dkim-validation-expected-results.tsv).
+[tests/fixtures/dkim-validation-expected-results.tsv](tests/fixtures/dkim-validation-expected-results.tsv).
 See [Manual execution](#manual-execution) for the DNS-backed test procedure.
 
 ## Test design
@@ -40,7 +40,7 @@ failures attributable to one rule and makes future changes easier to review.
 - Default TTL: `3600`
 - DNS name format: `<case-name>._domainkey.isaocxz.com`
 - External DNS cases are identified separately and are not defined in
-  `dkim-validation-test-zone.txt`.
+  `tests/fixtures/dkim-validation-test-zone.txt`.
 - Expected results describe RFC behavior, not merely the current implementation.
 - Only the checks relevant to the purpose of a case are fixed below. Other
   informational output may change without changing the meaning of the test.
@@ -157,7 +157,7 @@ RSA 2048-bit TXT record at `selector-4._domainkey.isaocxz.com`.
 DNS name: `selector1._domainkey.openai.com`
 
 This is an externally managed dependency and is not included in
-`dkim-validation-test-zone.txt`. Query it in DNS Lookup mode. The stable
+`tests/fixtures/dkim-validation-test-zone.txt`. Query it in DNS Lookup mode. The stable
 purpose is to show the alias followed by the final TXT owner returned by the
 recursive resolver; the key contents and overall result may change.
 
@@ -178,7 +178,7 @@ Observed with Google Public DNS, Cloudflare, and Quad9 on 2026-08-14:
 DNS name: `smtpapi._domainkey.cloudflare.com`
 
 This is an externally managed test dependency and is not included in
-`dkim-validation-test-zone.txt`. Query it in DNS Lookup mode using a validating resolver.
+`tests/fixtures/dkim-validation-test-zone.txt`. Query it in DNS Lookup mode using a validating resolver.
 The checker reports the resolver's AD bit; it does not validate DNSSEC
 signatures itself.
 
@@ -558,7 +558,7 @@ DNS name: `rsa2048._domainkey.isaocxz.com`
 
 ## Manual execution
 
-1. Import `dkim-validation-test-zone.txt` into the `isaocxz.com` hosted zone.
+1. Import `tests/fixtures/dkim-validation-test-zone.txt` into the `isaocxz.com` hosted zone.
 2. Wait for the authoritative DNS change and resolver caches to update.
 3. Open the checker in DNS Lookup mode.
 4. Query the DNS name listed for each case.

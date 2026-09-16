@@ -40,17 +40,17 @@ This repository contains a client-side DKIM public-key checker. The application 
 - Run `git diff --check` before handing off changes.
 - Serve the repository over localhost for browser tests, for example:
 
-  ```powershell
+  ```bash
   python -m http.server 8765 --bind 127.0.0.1
   ```
 
 - Use Chrome or the in-app browser to verify user-visible behavior. Do not rely only on static code inspection for UI, DNS, or Web Crypto changes.
 - Test direct TXT input where practical. Run the full DNS-backed regression set when the registered DNS fixtures are available.
-- When changing `dkim-validation-test-zone.txt`, keep it valid BIND-style zone data that can be imported directly into Cloudflare Authoritative DNS, and preserve the 255-octet limit for each quoted TXT character-string.
+- When changing `tests/fixtures/dkim-validation-test-zone.txt`, keep it valid BIND-style zone data that can be imported directly into Cloudflare Authoritative DNS, and preserve the 255-octet limit for each quoted TXT character-string.
 - Test each validation rule with a fixture that violates exactly one rule. Keep all other fields valid so that the reason for failure and the expected result remain unambiguous.
 
 ## Test data and privacy
 
-- Keep the configured `$ORIGIN` in `dkim-validation-test-zone.txt` unchanged unless the user explicitly requests a different test domain.
+- Keep the configured `$ORIGIN` in `tests/fixtures/dkim-validation-test-zone.txt` unchanged unless the user explicitly requests a different test domain.
 - Use the test domain only in test documentation and fixtures. Do not embed it unnecessarily in the application code.
-- Keep `dkim-validation-test-zone.txt`, `DKIM-VALIDATION-TEST-CASES.md`, and `dkim-validation-expected-results.tsv` consistent when test cases are added, removed, or changed.
+- Keep `tests/fixtures/dkim-validation-test-zone.txt`, `DKIM-VALIDATION-TEST-CASES.md`, and `tests/fixtures/dkim-validation-expected-results.tsv` consistent when test cases are added, removed, or changed.

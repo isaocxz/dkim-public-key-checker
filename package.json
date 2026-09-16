@@ -1,5 +1,6 @@
 {
   "name": "dkim-public-key-checker",
+  "description": "A browser-based tool for mail administrators to inspect and validate DKIM public-key records through DNS lookup or by pasting a TXT value.",
   "private": true,
   "license": "MIT",
   "type": "module",
