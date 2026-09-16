@@ -3,6 +3,34 @@
 This document defines the human-readable test specification for the DNS
 records in `dkim-validation-test-zone.txt`.
 
+## Test Methods
+
+Logic tests require Node.js 24 LTS and npm. Install the development dependency
+from the committed lockfile, then run the tests:
+
+```powershell
+npm ci
+npm test
+```
+
+Testing is divided into three layers:
+
+1. **Logic tests (Vitest)** test parsing, RFC validation, Base64 decoding, and
+   public-key inspection without DNS or a browser.
+2. **Browser tests** verify user input, displayed results, and URL behavior.
+3. **DNS-backed tests** verify DoH responses, TXT character-string handling,
+   CNAME resolution, and resolver DNSSEC status using live DNS records.
+
+Run the layers relevant to the change. Validation logic changes require
+Vitest, user-visible changes require browser testing, and DNS behavior changes
+require the DNS-backed regression cases below.
+
+DNS fixtures are provided in the Cloudflare-compatible BIND zone file
+[dkim-validation-test-zone.txt](dkim-validation-test-zone.txt). Machine-readable
+expected results are in
+[dkim-validation-expected-results.tsv](dkim-validation-expected-results.tsv).
+See [Manual execution](#manual-execution) for the DNS-backed test procedure.
+
 ## Test design
 
 Each case should vary one behavior from an otherwise valid record. This keeps
