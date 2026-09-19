@@ -360,6 +360,8 @@ function validateSelectorFlagsTag(value) {
 /*
  * RFC 6376 Section 3.6.1 defines n= as RFC 2045 qp-section. A quoted
  * octet is "=" followed by exactly two uppercase hexadecimal digits.
+ * An n= value is also a tag-value (Section 3.2), so an unencoded ";" is
+ * rejected even though qp-section itself would allow it.
  */
 function validateQpSection(value) {
   for (let index=0; index<value.length; index++) {
@@ -374,15 +376,16 @@ function validateQpSection(value) {
       continue;
     }
 
+    // RFC 6376 3.2: an unencoded ";" MUST NOT occur in a tag value, because
+    // it separates tag-specs; write it as =3B. RFC 2045 safe-char includes
+    // ";", so it is rejected here rather than by the range below. parseTags
+    // already splits on ";", so this is not reached from addRfc6376Checks.
+    if (value[index] === ";") {
+      return {ok:false, error:"n= contains an unencoded semicolon; write it as =3B"};
+    }
+
     // RFC 2045 safe-char is printable ASCII except '='; qp-section also
     // permits literal SPACE and HTAB between printable characters.
-    // This range copies RFC 2045 safe-char exactly, so it includes ";" (59).
-    // That does not mean n= may contain a literal ";". RFC 6376 3.2 forbids an
-    // unencoded ";" in any tag value (write it as =3B instead), and parseTags
-    // splits the record on ";" before n= is extracted, so a raw ";" never
-    // reaches this function from addRfc6376Checks, its only caller.
-    // Do not narrow the range to RFC 6376's dkim-safe-char: that excludes ";"
-    // but is defined for i= and z=, not for n=.
     const isSafeChar = (code >= 33 && code <= 60) || (code >= 62 && code <= 126);
     const isWhitespace = code === 32 || code === 9;
     if (!isSafeChar && !isWhitespace) {

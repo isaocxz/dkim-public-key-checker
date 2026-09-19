@@ -299,6 +299,18 @@ describe("quoted-printable notes", () => {
   test("rejects an incomplete escape", () => {
     expect(validateQpSection("note=2").ok).toBe(false);
   });
+
+  test("rejects an unencoded semicolon", () => {
+    expect(validateQpSection("note;example").ok).toBe(false);
+  });
+
+  test("accepts a semicolon written as the escape =3B", () => {
+    expect(validateQpSection("note=3Bexample").ok).toBe(true);
+  });
+
+  test("accepts the characters adjacent to the excluded semicolon", () => {
+    expect(validateQpSection(":<").ok).toBe(true);
+  });
 });
 
 describe("public-key encoding", () => {
