@@ -376,6 +376,13 @@ function validateQpSection(value) {
 
     // RFC 2045 safe-char is printable ASCII except '='; qp-section also
     // permits literal SPACE and HTAB between printable characters.
+    // This range copies RFC 2045 safe-char exactly, so it includes ";" (59).
+    // That does not mean n= may contain a literal ";". RFC 6376 3.2 forbids an
+    // unencoded ";" in any tag value (write it as =3B instead), and parseTags
+    // splits the record on ";" before n= is extracted, so a raw ";" never
+    // reaches this function from addRfc6376Checks, its only caller.
+    // Do not narrow the range to RFC 6376's dkim-safe-char: that excludes ";"
+    // but is defined for i= and z=, not for n=.
     const isSafeChar = (code >= 33 && code <= 60) || (code >= 62 && code <= 126);
     const isWhitespace = code === 32 || code === 9;
     if (!isSafeChar && !isWhitespace) {
