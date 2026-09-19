@@ -2,6 +2,7 @@ Test ID	FQDN	Expected Overall	Validation results
 TC-DNS-001	single-string._domainkey.isaocxz.com	PASS (Warnings)	TXT RRs: PASS (1) / TXT character-strings: INFO (1) / RSA key length: WARN 1024 bit
 TC-DNS-002	multi-string._domainkey.isaocxz.com	PASS	TXT RRs: PASS (1) / TXT character-strings: INFO (2) / RSA key length: PASS 2048 bit
 TC-DNS-003	multi-rr._domainkey.isaocxz.com	FAIL	TXT RRs: FAIL (2)
+TC-DNS-004	split-p-tag._domainkey.isaocxz.com	PASS	TXT RRs: PASS (1) / TXT character-strings: INFO (3) / p= chunks: 3 / RSA key length: PASS 2048 bit
 TC-CNAME-001	selector1._domainkey.openai.com	VARIABLE	DNS TXT lookup: PASS / CNAME resolution: INFO (1 CNAME hop) / CNAME chain: selector1._domainkey.openai.com -> selector1-openai-com._domainkey.openaiinc.onmicrosoft.com / Final TXT owner: selector1-openai-com._domainkey.openaiinc.onmicrosoft.com; key and overall results may change
 TC-CNAME-002	selector-1._domainkey.isaocxz.com	PASS	DNS TXT lookup: PASS / TXT RRs: PASS (1) / CNAME resolution: INFO (3 CNAME hops) / CNAME chain: selector-1._domainkey.isaocxz.com -> selector-2._domainkey.isaocxz.com -> selector-3._domainkey.isaocxz.com -> selector-4._domainkey.isaocxz.com / Final TXT owner: selector-4._domainkey.isaocxz.com / RSA key length: PASS 2048 bit
 TC-DNSSEC-001	smtpapi._domainkey.cloudflare.com	VARIABLE	DNS TXT lookup: PASS / TXT RRs: PASS (1) / DNSSEC: INFO Secure (resolver AD=true); key and overall results may change

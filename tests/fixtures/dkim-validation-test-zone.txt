@@ -29,6 +29,13 @@ multi-rr._domainkey 3600 IN TXT (
   "CIRAtbyX6OpczvaB2SwWu+NvOpS7H6j/d7w1Om1uwwGw6/4jdFf9Vfbqno33QNd6SFq7E/pz5qFTuBo7TTM/RSQNwafgbkxnCc2D69+zZBphUzB2i26hyouqL0bw0mfx3TSDMveP15GZd/MT29fqK7mFiOBnNXQIWRHwZwIDAQAB"
 )
 
+; TC-DNS-004: One TXT RR whose first character-string ends between the p tag name and "=".
+split-p-tag._domainkey 3600 IN TXT (
+  "v=DKIM1; k=rsa; p"
+  "=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnjixPCb3MwVP/oC91Oz1ogcPtW7qdtI5tGTE3qyer8aSs0bR6RcLL99kntHw5yxxRzT5Nco3LKvQ2wxXgYkk4529++eW0i8ziivBOKA5dKp9hxj99ery/UGad5MLTHx5F60wuG5K6mQRAOBrADJ0DFE8FNW"
+  "2VU0tpLlaREi4Iwp/UQ3ebli+AjaF9/Stsaz6d/jH9sgBPQbofu3AtiFim0rQA88Ui8QYlz8TGorvckvSYZoSYCPS6YeQT6sFqdPAIjyIyr5DNfDTiNa+QZnxgL0r159jRsa5sf3G3m7bJu+0SpQf6+S1W+UIEAqtwLjqr/A88NTBnGnnDbUXaQSYwQIDAQAB"
+)
+
 ; TC-CNAME-002: Three CNAME hops ending at one valid RSA 2048-bit TXT RR.
 selector-1._domainkey 3600 IN CNAME selector-2._domainkey.isaocxz.com.
 selector-2._domainkey 3600 IN CNAME selector-3._domainkey.isaocxz.com.

@@ -55,6 +55,7 @@ syntax validation implemented by the checker.
 | TC-DNS-001 | `single-string` | One TXT RR with one character-string | `PASS (Warnings)` | Implemented |
 | TC-DNS-002 | `multi-string` | Concatenate character-strings in one TXT RR | `PASS` | Implemented |
 | TC-DNS-003 | `multi-rr` | Reject multiple TXT RRs for one selector | `FAIL` | Implemented |
+| TC-DNS-004 | `split-p-tag` | Concatenate character-strings when a boundary separates the `p` tag name from `=` | `PASS` | Implemented |
 | TC-CNAME-001 | `selector1._domainkey.openai.com` | Display the CNAME chain and final TXT owner | Variable; chain and owner must match | Implemented |
 | TC-CNAME-002 | `selector-1` | Follow a three-hop CNAME chain to the final TXT owner | `PASS` | Implemented |
 | TC-DNSSEC-001 | `smtpapi._domainkey.cloudflare.com` | Report the resolver's DNSSEC status from the AD bit | Variable; DNSSEC must be `Secure` | Implemented |
@@ -130,6 +131,25 @@ the TXT RR must be unique.
 | --- | --- |
 | TXT RRs | `FAIL — 2` |
 | Overall | `FAIL` |
+
+### TC-DNS-004 — Character-string boundary inside a tag
+
+DNS name: `split-p-tag._domainkey.isaocxz.com`
+
+This changes only the storage representation. It uses the same valid RSA
+2048-bit key as TC-DNS-002, split across three character-strings so that the
+first one ends with the tag name `p` and the second begins with `=`.
+RFC 6376 section 3.6.2.2 requires the character-strings to be concatenated
+before use, so a boundary may fall anywhere in the record, including inside a
+tag-spec.
+
+| Check | Expected |
+| --- | --- |
+| TXT RRs | `PASS — 1` |
+| TXT character-strings | `INFO — 3` |
+| p= chunks (auxiliary information) | `3` |
+| RSA key length | `PASS — 2048 bit` |
+| Overall | `PASS` |
 
 ## Managed CNAME
 
