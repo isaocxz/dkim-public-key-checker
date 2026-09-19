@@ -363,7 +363,7 @@ function validateSelectorFlagsTag(value) {
  * An n= value is also a tag-value (Section 3.2), so an unencoded ";" is
  * rejected even though qp-section itself would allow it.
  */
-function validateQpSection(value) {
+function validateNotesTagValue(value) {
   for (let index=0; index<value.length; index++) {
     const code = value.charCodeAt(index);
     if (value[index] === "=") {
@@ -518,8 +518,8 @@ function addRfc6376Checks(checks, info) {
 
   // n= is OPTIONAL and uses RFC 2045 qp-section encoding.
   if (info.tags.n !== undefined) {
-    const qpSection = validateQpSection(info.tags.n);
-    if (qpSection.ok) {
+    const notes = validateNotesTagValue(info.tags.n);
+    if (notes.ok) {
       checks.push({
         status:"info",
         check:"Notes",
@@ -527,7 +527,7 @@ function addRfc6376Checks(checks, info) {
         category:"dkim"
       });
     } else {
-      checks.push({status:"fail", check:"Notes", detail:qpSection.error, category:"dkim"});
+      checks.push({status:"fail", check:"Notes", detail:notes.error, category:"dkim"});
     }
   } else {
     checks.push({status:"info", check:"Notes", detail:"n= omitted; default is empty", category:"dkim"});
@@ -671,6 +671,6 @@ export {
   inspectRsaPublicKey,
   parseTags,
   sha256Fingerprint,
-  validateQpSection,
+  validateNotesTagValue,
   validationOverall
 };

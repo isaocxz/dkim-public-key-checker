@@ -11,7 +11,7 @@ import {
   inspectEd25519PublicKey,
   parseTags,
   sha256Fingerprint,
-  validateQpSection,
+  validateNotesTagValue,
   validationOverall
 } from "../js/dkim-validation.js";
 
@@ -293,23 +293,23 @@ describe("key type display", () => {
 
 describe("quoted-printable notes", () => {
   test("accepts an uppercase hexadecimal escape", () => {
-    expect(validateQpSection("note=20example").ok).toBe(true);
+    expect(validateNotesTagValue("note=20example").ok).toBe(true);
   });
 
   test("rejects an incomplete escape", () => {
-    expect(validateQpSection("note=2").ok).toBe(false);
+    expect(validateNotesTagValue("note=2").ok).toBe(false);
   });
 
   test("rejects an unencoded semicolon", () => {
-    expect(validateQpSection("note;example").ok).toBe(false);
+    expect(validateNotesTagValue("note;example").ok).toBe(false);
   });
 
   test("accepts a semicolon written as the escape =3B", () => {
-    expect(validateQpSection("note=3Bexample").ok).toBe(true);
+    expect(validateNotesTagValue("note=3Bexample").ok).toBe(true);
   });
 
   test("accepts the characters adjacent to the excluded semicolon", () => {
-    expect(validateQpSection(":<").ok).toBe(true);
+    expect(validateNotesTagValue(":<").ok).toBe(true);
   });
 });
 
