@@ -7,7 +7,6 @@ This repository contains a client-side DKIM public-key checker. The application 
 ## Working rules
 
 - Keep changes small, focused, and easy to review.
-- Use one commit per Issue. Do not combine fixes for multiple Issues in one commit unless the user explicitly approves an exception.
 - When a commit resolves an Issue, include `Fixes #<Issue number>` in the commit message body so GitHub links and closes the Issue automatically.
 - Apply an appropriate GitHub Issue label, such as `bug` or `enhancement`, so the Issue type is clear at a glance. When work is completed, verify both the label and the closed state.
 - Keep feature additions and behavior changes separate from refactoring. Do not mix them in the same change unless separating them is impractical and the user agrees.
