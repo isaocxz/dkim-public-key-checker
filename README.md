@@ -112,6 +112,11 @@ current page session and is not stored or added to the page URL.
   DNS fixtures, and expected results. The machine-readable versions of these
   fixtures are in [tests/fixtures/](tests/fixtures/).
 
+## Feedback and Bug Reports
+
+Feedback and bug reports are welcome!
+Please [open an issue](https://github.com/isaocxz/dkim-public-key-checker/issues).
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
