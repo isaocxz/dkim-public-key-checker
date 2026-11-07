@@ -37,13 +37,33 @@ describe("DKIM validation result model", () => {
     expect(checkResult(result, "p= public key").detail).toBe("Revoked: p= is empty");
   });
 
-  test("includes DNS metadata and rejects multiple TXT RRs", async () => {
+  test("rejects a quoted TXT character-string over 255 octets", async () => {
+    const oversizedNotes = "a".repeat(256);
+    const logical = `v=DKIM1; n=${oversizedNotes}; p=${VALID_ED25519_KEY}`;
     const result = await buildValidationResult(
-      `v=DKIM1; k=ed25519; p=${VALID_ED25519_KEY}`,
+      logical,
+      {
+        rawChunks: [logical],
+        chunkOctets: [new TextEncoder().encode(logical).length]
+      }
+    );
+
+    expect(result.overall).toBe("FAIL");
+    expect(checkResult(result, "TXT character-string size")).toMatchObject({
+      status: "fail",
+      detail: expect.stringContaining("Exceeds the 255-octet limit")
+    });
+  });
+
+  test("includes DNS metadata and rejects multiple TXT RRs", async () => {
+    const chunks = ["v=DKIM1; k=ed25519; ", `p=${VALID_ED25519_KEY}`];
+    const result = await buildValidationResult(
+      chunks.join(""),
       {
         name: "target._domainkey.example.com",
         txtRrCount: 2,
         dnssec: "Not authenticated (resolver AD=false)",
+        rawChunks: chunks,
         cnameChain: [{
           owner: "selector._domainkey.example.com",
           target: "target._domainkey.example.com"
@@ -52,6 +72,7 @@ describe("DKIM validation result model", () => {
     );
 
     expect(result.overall).toBe("FAIL");
+    expect(result.info.chunks).toEqual(chunks);
     expect(checkResult(result, "TXT RRs").status).toBe("fail");
     expect(checkResult(result, "CNAME resolution").detail).toBe(
       "1 CNAME hop; final TXT owner target._domainkey.example.com"

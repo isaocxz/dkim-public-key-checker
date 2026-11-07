@@ -44,7 +44,7 @@ This repository contains a client-side DKIM public-key checker. The application 
   ```
 
 - Use Chrome or the in-app browser to verify user-visible behavior. Do not rely only on static code inspection for UI, DNS, or Web Crypto changes.
-- Test direct TXT input where practical. Run the full DNS-backed regression set when the registered DNS fixtures are available.
+- Test Record Value input where practical. Run the full DNS-backed regression set when the registered DNS fixtures are available.
 - When changing `tests/fixtures/dkim-validation-test-zone.txt`, keep it valid BIND-style zone data that can be imported directly into Cloudflare Authoritative DNS, and preserve the 255-octet limit for each quoted TXT character-string.
 - Test each validation rule with a fixture that violates exactly one rule. Keep all other fields valid so that the reason for failure and the expected result remain unambiguous.
 

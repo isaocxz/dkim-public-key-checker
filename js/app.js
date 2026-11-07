@@ -4,6 +4,7 @@ import {
   classifyDkimTags,
   countPChunks,
   formatKeyTypeTag,
+  parseTxtRecordValue,
   validationOverall
 } from "./dkim-validation.js";
 import { buildValidationResult } from "./dkim-analysis.js";
@@ -27,7 +28,7 @@ import { dohWireQuery } from "./doh-transport.js";
  */
 const $ = id => document.getElementById(id);
 
-const TXT_RECORD_SOURCE = "TXT Record mode";
+const RECORD_VALUE_SOURCE = "Record Value";
 let dnsLookupInProgress = false;
 
 function setDnsLookupInProgress(inProgress) {
@@ -51,7 +52,7 @@ function showError(prefix, error) {
 }
 
 function isDnsSource(meta) {
-  return Boolean(meta.source && meta.source !== TXT_RECORD_SOURCE);
+  return Boolean(meta.source && meta.source !== RECORD_VALUE_SOURCE);
 }
 
 function showMode(mode) {
@@ -185,7 +186,7 @@ function renderDnsResolutionPath(requestedName, chain, finalOwner) {
 }
 
 const VALIDATION_DESCRIPTIONS = {
-  "Source":"Shows whether the record came from DNS or direct TXT input.",
+  "Source":"Shows whether the record came from DNS or Record Value input.",
   "Key record parsing":"Checks that the DKIM key record can be parsed into tags.",
   "RFC version":"Checks that v= is DKIM1 when the version tag is present.",
   "Hash algorithms":"Checks values advertised by the optional h= tag.",
@@ -197,6 +198,7 @@ const VALIDATION_DESCRIPTIONS = {
   "TXT record":"Checks whether a TXT record is available.",
   "TXT RRs":"Checks that exactly one TXT RR exists.",
   "TXT character-strings":"Counts character-strings in the selected TXT RR.",
+  "TXT character-string size":"Checks the RFC 1035 limit of 255 octets per quoted string.",
   "DNSSEC":"Shows DNSSEC status reported by the selected resolver's AD bit.",
   "CNAME resolution":"Shows the alias hop count and final TXT owner.",
   "RFC tag-list syntax":"Checks RFC 6376 tag=value list syntax.",
@@ -416,7 +418,7 @@ async function analyze(record, meta={}) {
       overallResult === "FAIL" ? "fail" :
       overallResult === "PASS (Warnings)" ? "warn" : "pass"
     );
-    $("source").textContent = meta.source || TXT_RECORD_SOURCE;
+    $("source").textContent = meta.source || RECORD_VALUE_SOURCE;
 
     // Browser-local timestamp: records when this validation was performed.
     $("checkedAt").textContent = new Date().toLocaleString(undefined, {
@@ -436,8 +438,9 @@ async function analyze(record, meta={}) {
     $("dnsType").textContent = meta.type || "TXT";
     $("dnsTtl").textContent = meta.ttl != null ? `${meta.ttl} seconds` : "—";
     $("txtRrs").textContent = meta.txtRrCount !== undefined ? String(meta.txtRrCount) : "—";
-    $("txtChunks").textContent = `${info.chunks.length}`;
-    $("pChunks").textContent = `${countPChunks(info.chunks)}`;
+    const hasChunkBoundaries = Array.isArray(meta.rawChunks);
+    $("txtChunks").textContent = hasChunkBoundaries ? `${info.chunks.length}` : "—";
+    $("pChunks").textContent = hasChunkBoundaries ? `${countPChunks(info.chunks)}` : "—";
     $("dnssec").textContent = meta.dnssec || "Not checked / not applicable";
 
     $("providerInference").classList.toggle("hidden", !providerInference);
@@ -633,14 +636,10 @@ async function runDnsLookup(rawName) {
       return;
     }
 
-    // Re-create quoted presentation solely for the common analysis path;
-    // chunk boundaries came from the actual TXT RDATA length octets.
-    const presentation=selectedAnswer.chunks.map(c=>`"${c.replace(/\\/g,"\\\\").replace(/"/g,'\\"')}"`).join("\n");
-
     // SOA lookup is intentionally auxiliary: failure does not fail the key check.
     const soa=await findNearestSoa(resolver,name);
 
-    await analyze(presentation,{
+    await analyze(selectedAnswer.logical,{
       source:`${resolver.label} / DoH (RFC 8484 wire format)`,
       requestedName:name,
       name:selectedAnswer.name || name,
@@ -665,6 +664,20 @@ function dnsLookup() {
   return runDnsLookup($("fqdn").value);
 }
 
+async function validateRecordValue() {
+  hideOutput();
+  try {
+    const parsed = parseTxtRecordValue($("txtInput").value);
+    await analyze(parsed.logical, {
+      source: RECORD_VALUE_SOURCE,
+      rawChunks: parsed.chunks,
+      chunkOctets: parsed.chunkOctets
+    });
+  } catch (error) {
+    showError("Invalid", error);
+  }
+}
+
 function signatureLookup() {
   hideOutput();
   const target = extractDkimLookupTarget($("signatureInput").value);
@@ -682,7 +695,7 @@ function signatureLookup() {
 }
 
 $("dnsCheck").onclick = dnsLookup;
-$("txtCheck").onclick = () => analyze($("txtInput").value, {source:TXT_RECORD_SOURCE});
+$("txtCheck").onclick = validateRecordValue;
 $("signatureCheck").onclick = signatureLookup;
 $("fqdn").addEventListener("keydown", e => { if(e.key==="Enter") dnsLookup(); });
 $("fqdn").addEventListener("input", () => $("signatureSource").classList.add("hidden"));

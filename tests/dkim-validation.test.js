@@ -10,6 +10,7 @@ import {
   hasDkimPublicKeyTag,
   inspectEd25519PublicKey,
   parseTags,
+  parseTxtRecordValue,
   sha256Fingerprint,
   validateNotesTagValue,
   validationOverall
@@ -28,11 +29,55 @@ function checkResult(checks, name) {
 }
 
 describe("DKIM tag parsing", () => {
-  test("joins quoted TXT character-strings before parsing", () => {
-    const result = parseTags('"v=DKIM1; k=ed25519; " "p=AAAA"');
+  test("joins quoted TXT character-strings and preserves their boundaries", () => {
+    const result = parseTxtRecordValue('"v=DKIM1; k=ed25519; " "p=AAAA"');
 
     expect(result.logical).toBe("v=DKIM1; k=ed25519; p=AAAA");
-    expect(result.chunks).toHaveLength(2);
+    expect(result.chunks).toEqual(["v=DKIM1; k=ed25519; ", "p=AAAA"]);
+    expect(result.chunkOctets).toEqual([20, 6]);
+  });
+
+  test("keeps a double quote in the decoded logical n= value", () => {
+    const result = parseTags('v=DKIM1; n=hello "world"; p=AAAA');
+
+    expect(result.logical).toBe('v=DKIM1; n=hello "world"; p=AAAA');
+    expect(result.chunks).toHaveLength(1);
+    expect(result.tags.n).toBe('hello "world"');
+    expect(result.tags.p).toBe("AAAA");
+  });
+
+  test("decodes an escaped quote in quoted TXT presentation", () => {
+    const parsed = parseTxtRecordValue('"v=DKIM1; n=hello \\"world\\"; " "p=AAAA"');
+    const result = parseTags(parsed.logical, parsed.chunks, parsed.chunkOctets);
+
+    expect(result.tags.n).toBe('hello "world"');
+    expect(result.tags.p).toBe("AAAA");
+  });
+
+  test("decodes a three-digit decimal TXT escape as one octet", () => {
+    const parsed = parseTxtRecordValue('"v=DKIM1; n=hello\\032world; p=AAAA"');
+    const result = parseTags(parsed.logical, parsed.chunks, parsed.chunkOctets);
+
+    expect(result.tags.n).toBe("hello world");
+    expect(result.chunkOctets).toEqual([30]);
+  });
+
+  test("rejects text outside quoted TXT character-strings", () => {
+    expect(() => parseTxtRecordValue('"v=DKIM1; p=AAAA" trailing'))
+      .toThrow("must contain only quoted character-strings");
+  });
+
+  test("rejects an unquoted Record Value input", () => {
+    expect(() => parseTxtRecordValue("v=DKIM1; p=AAAA"))
+      .toThrow("one or more quoted character-strings");
+  });
+
+  test("uses DNS character-string boundaries supplied by the wire parser", () => {
+    const chunks = ["v=DKIM1; k=ed25519; ", "p=AAAA"];
+    const result = parseTags(chunks.join(""), chunks);
+
+    expect(result.logical).toBe("v=DKIM1; k=ed25519; p=AAAA");
+    expect(result.chunks).toEqual(chunks);
     expect(result.tags.p).toBe("AAAA");
   });
 

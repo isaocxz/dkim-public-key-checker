@@ -23,7 +23,11 @@ function addNotEvaluatedKeyChecks(checks, reason) {
  * app.js remains responsible for input handling and presentation.
  */
 async function buildValidationResult(record, meta = {}) {
-  const extracted = extractP(record);
+  const extracted = extractP(
+    record,
+    meta.rawChunks || null,
+    meta.chunkOctets || null
+  );
   const { state: pState, p: pValue, info } = extracted;
   const keyType = info.tags.k === undefined ? "rsa" : info.tags.k;
 
@@ -59,17 +63,17 @@ async function buildValidationResult(record, meta = {}) {
     bitLength
   } = keyInspection;
 
-  /* Validation follows DNS / TXT Record -> DKIM Key Record -> Public Key. */
+  /* Validation follows DNS / Record Value -> DKIM Key Record -> Public Key. */
   const checks = [];
   const providerInference = inferDkimProvider(meta.name, meta.cnameChain);
 
   if (meta.txtRrCount !== undefined) {
     checks.push({status:"pass", check:"DNS TXT lookup", detail:"Record found", category:"dns"});
+    checks.push({status:"pass", check:"TXT record", detail:"Parsed successfully", category:"dns"});
   } else {
     checks.push({status:"info", check:"Source",
-      detail:"Direct TXT input; DNS lookup not performed", category:"dns"});
+      detail:"Record Value input; DNS lookup not performed", category:"dns"});
   }
-  checks.push({status:"pass", check:"TXT record", detail:"Parsed successfully", category:"dns"});
   if (meta.txtRrCount !== undefined) {
     if (meta.txtRrCount === 1) {
       checks.push({
@@ -88,11 +92,34 @@ async function buildValidationResult(record, meta = {}) {
     }
   } else {
     checks.push({status:"info", check:"TXT RRs",
-      detail:"Not available in direct TXT input mode", category:"dns"});
+      detail:"Not available for a Record Value check", category:"dns"});
   }
-  checks.push({status:"info", check:"TXT character-strings",
-    detail:`${info.chunks.length}`, category:"dns"});
+  if (info.chunkOctets !== null) {
+    const oversizedChunks = info.chunkOctets
+      .map((octets, index) => ({number:index + 1, octets}))
+      .filter(chunk => chunk.octets > 255);
+    if (oversizedChunks.length === 0) {
+      checks.push({
+        status:"pass",
+        check:"TXT character-string size",
+        detail:`${info.chunks.length} strings; each is at most 255 octets`,
+        category:"dns"
+      });
+    } else {
+      const details = oversizedChunks
+        .map(chunk => `#${chunk.number}: ${chunk.octets} octets`)
+        .join(", ");
+      checks.push({
+        status:"fail",
+        check:"TXT character-string size",
+        detail:`Exceeds the 255-octet limit (${details})`,
+        category:"dns"
+      });
+    }
+  }
   if (meta.txtRrCount !== undefined) {
+    checks.push({status:"info", check:"TXT character-strings",
+      detail:`${info.chunks.length}`, category:"dns"});
     checks.push({status:"info", check:"DNSSEC",
       detail:meta.dnssec || "Not checked", category:"dns"});
     const cnameChain = meta.cnameChain || [];

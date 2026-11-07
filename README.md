@@ -3,14 +3,14 @@
 [**Open the checker**](https://isaocxz.github.io/dkim-public-key-checker/)
 
 A browser-based tool for mail administrators to inspect and validate DKIM
-public-key records through DNS lookup or by pasting a TXT value. It shows
+public-key records through DNS lookup or by pasting a record value. It shows
 which checks passed or failed to help you investigate configuration problems.
 
 ## Why Use This Checker?
 
 | Capability | What this checker provides |
 | --- | --- |
-| Pre-publication validation | Validate a pasted TXT value before changing DNS, including its syntax, key format, and actual RSA key size. |
+| Pre-publication validation | Validate a DKIM key record value before publishing it in DNS, including its syntax, key format, and actual RSA key size. |
 | Detailed validation results | Separate DNS, DKIM tag, and public-key results help pinpoint configuration, syntax, or key-data problems. |
 | CNAME resolution path | Inspect the CNAME chain and final TXT owner, with likely provider information for recognized targets. |
 | TXT record structure | Inspect the strings within each TXT record and detect multiple TXT records at the same selector. |
@@ -46,19 +46,29 @@ Opening a link with the `fqdn` parameter starts a lookup automatically:
 https://isaocxz.github.io/dkim-public-key-checker/?fqdn=selector._domainkey.example.com
 ```
 
-### Check a TXT Value Before or After Publication
+### Check a Record Value Before Publication
 
-1. Select **TXT Record**.
-2. Paste the complete DKIM TXT value supplied by your provider or DNS tool.
+1. Select **Record Value**.
+2. Paste the complete RFC 1035/BIND-compatible TXT value that will be placed
+   in DNS.
 3. Click **Validate**.
 
-For example, a record begins with `v=DKIM1; k=rsa; p=...`; include the full
-public key in place of `...`. Quoted DNS strings are also accepted and joined
-without inserting spaces before validation.
+Use quoted character-strings to preserve and check the intended DNS split:
+
+```text
+"v=DKIM1; k=rsa; "
+"p=MIIBIjANBgkqhkiG9w0BAQEFA..."
+```
+
+Each quoted string is checked against the RFC 1035 limit of 255 octets, then
+the strings are joined without adding whitespace before DKIM validation. DNS
+presentation escapes such as `\"`, `\\`, and decimal `\DDD` are decoded. Do
+not include the owner name, TTL, or record type.
 
 This mode works without network access once the page has loaded. It is also
-useful when DoH access is unavailable. It cannot confirm what is published in
-DNS or report DNS-level information such as TXT record count or DNSSEC status.
+useful for checking provider-supplied key material before changing DNS. It
+cannot confirm what is published or report DNS-level information such as TXT
+record count, character-string boundaries, CNAME resolution, or DNSSEC status.
 
 ## Reading the Results
 
@@ -93,8 +103,8 @@ will pass authentication or be delivered.
 
 ## Data Handling
 
-TXT validation and header extraction happen in the browser. Pasted TXT values
-and complete DKIM-Signature headers are not uploaded. DNS Lookup mode sends
+Record Value validation and header extraction happen in the browser. Pasted
+record values and complete DKIM-Signature headers are not uploaded. DNS Lookup sends
 the requested DNS name and related DNS queries to the selected DoH resolver.
 There is no analytics or telemetry.
 

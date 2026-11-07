@@ -21,35 +21,106 @@ function removeRfcFws(value) {
   return value.replace(RFC_FWS_RE, "");
 }
 
-/* Parse quoted TXT character-strings from pasted tool output. */
-function txtPresentationInfo(raw) {
-  const text = trimRfcFws(String(raw ?? ""));
+function isPresentationWhitespace(character) {
+  return character === " "
+    || character === "\t"
+    || character === "\r"
+    || character === "\n";
+}
+
+function parseQuotedTxtChunks(text) {
   const chunks = [];
-  const re = /"((?:\\.|[^"\\])*)"/g;
-  let match;
-  while ((match = re.exec(text)) !== null) {
-    // DNS JSON presentation can contain escaped quote/backslash sequences.
-    // RFC 1035 also defines \DDD decimal-byte escapes for non-printable
-    // bytes, intentionally left undecoded: the only tag that could carry
-    // such a byte is the free-text, informational-only n= tag, so this
-    // affects at most a notes display, not DKIM validation.
-    chunks.push(match[1].replace(/\\"/g,'"').replace(/\\\\/g,'\\'));
-  }
-  if (!chunks.length) {
-    return {logical:text, chunks:[text]};
+  const chunkOctets = [];
+  let position = 0;
+
+  while (position < text.length) {
+    if (text[position] !== '"') {
+      throw new Error("Quoted TXT input must contain only quoted character-strings.");
+    }
+    position += 1;
+
+    let chunk = "";
+    let octets = 0;
+    let closed = false;
+    while (position < text.length) {
+      const character = text[position];
+      if (character === '"') {
+        closed = true;
+        position += 1;
+        break;
+      }
+      if (character === "\r" || character === "\n") {
+        throw new Error("A quoted TXT character-string cannot contain a line break.");
+      }
+
+      if (character === "\\") {
+        if (position + 1 >= text.length) {
+          throw new Error("The quoted TXT value ends with an incomplete escape.");
+        }
+
+        const decimalEscape = text.slice(position + 1, position + 4);
+        if (/^[0-9]{3}$/.test(decimalEscape)) {
+          const octet = Number(decimalEscape);
+          if (octet > 255) {
+            throw new Error(`The TXT decimal escape \\${decimalEscape} exceeds 255.`);
+          }
+          chunk += String.fromCharCode(octet);
+          octets += 1;
+          position += 4;
+          continue;
+        }
+
+        const escapedCharacter = text[position + 1];
+        chunk += escapedCharacter;
+        octets += new TextEncoder().encode(escapedCharacter).length;
+        position += 2;
+        continue;
+      }
+
+      const codePoint = String.fromCodePoint(text.codePointAt(position));
+      chunk += codePoint;
+      octets += new TextEncoder().encode(codePoint).length;
+      position += codePoint.length;
+    }
+
+    if (!closed) {
+      throw new Error("The quoted TXT character-string is not closed.");
+    }
+    chunks.push(chunk);
+    chunkOctets.push(octets);
+
+    const separatorStart = position;
+    while (position < text.length && isPresentationWhitespace(text[position])) {
+      position += 1;
+    }
+    if (position < text.length && position === separatorStart) {
+      throw new Error("Quoted TXT character-strings must be separated by whitespace.");
+    }
   }
 
-  return {logical:chunks.join(""), chunks};
+  return {chunks, chunkOctets};
+}
+
+function parseTxtRecordValue(raw) {
+  const text = trimRfcFws(String(raw ?? ""));
+  if (!text.startsWith('"')) {
+    throw new Error("Enter the TXT value as one or more quoted character-strings.");
+  }
+
+  const parsed = parseQuotedTxtChunks(text);
+  return {
+    logical: parsed.chunks.join(""),
+    chunks: parsed.chunks,
+    chunkOctets: parsed.chunkOctets
+  };
 }
 
 /* Count TXT character-strings occupied by p= and its continuation. */
 function countPChunks(chunks) {
-  // Locate the p= tag-spec once in the joined record (chunks.join("") is
-  // always equal to txtPresentationInfo's `logical`) instead of matching
-  // each chunk in isolation, so a "p=" that straddles a chunk boundary is
-  // still found. Treating ";" as an unconditional tag separator here is
-  // safe: the Base64 alphabet (A-Za-z0-9+/=) never contains ";", so it
-  // cannot appear inside a well-formed p= value.
+  // Locate the p= tag-spec once in the joined record instead of matching each
+  // chunk in isolation, so a "p=" that straddles a boundary is still found.
+  // Treating ";" as an unconditional separator is safe because it cannot
+  // occur in a well-formed Base64 p= value.
   const logical = chunks.join("");
   const tagMatch = /(?:^|;)(?:(?:[ \t]*\r?\n)?[ \t]+)*p(?:(?:[ \t]*\r?\n)?[ \t]+)*=/.exec(logical);
   if (!tagMatch) {
@@ -76,8 +147,16 @@ function countPChunks(chunks) {
 }
 
 /* Parse the logical DKIM key record into tag=value pairs. */
-function parseTags(record) {
-  const {logical, chunks} = txtPresentationInfo(record);
+function parseTags(record, sourceChunks = null, sourceChunkOctets = null) {
+  let logical = trimRfcFws(String(record ?? ""));
+  let chunks;
+  if (sourceChunks === null) {
+    chunks = [logical];
+  } else {
+    // The TXT input parser or DNS wire parser supplies the real boundaries.
+    chunks = sourceChunks;
+    logical = chunks.join("");
+  }
   const tags = {};
   const fields = [];
   const duplicates = [];
@@ -133,11 +212,18 @@ function parseTags(record) {
     }
   }
 
-  return {logical, chunks, tags, fields, duplicates};
+  return {
+    logical,
+    chunks,
+    chunkOctets: sourceChunkOctets,
+    tags,
+    fields,
+    duplicates
+  };
 }
 
-function extractP(record) {
-  const info = parseTags(record);
+function extractP(record, sourceChunks = null, sourceChunkOctets = null) {
+  const info = parseTags(record, sourceChunks, sourceChunkOctets);
 
   if (!("p" in info.tags)) {
     return {state:"missing", p:null, info};
@@ -689,6 +775,7 @@ export {
   inspectEd25519PublicKey,
   inspectRsaPublicKey,
   parseTags,
+  parseTxtRecordValue,
   sha256Fingerprint,
   validateNotesTagValue,
   validationOverall

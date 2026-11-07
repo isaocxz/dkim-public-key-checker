@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DKIM Public Key Checker – Validate DNS Records</title>
-<meta name="description" content="Check DKIM public key records through DNS over HTTPS, direct TXT input, or a DKIM-Signature header. Validate RSA and Ed25519 keys, DNSSEC status, and CNAME resolution paths.">
+<meta name="description" content="Check DKIM public key records through DNS over HTTPS, a record value before DNS publication, or a DKIM-Signature header. Validate RSA and Ed25519 keys, DNSSEC status, and CNAME resolution paths.">
 <link rel="canonical" href="https://isaocxz.github.io/dkim-public-key-checker/">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,7 +14,7 @@
     <h1>DKIM Public Key Checker</h1>
 
     <div class="mode-title">Choose a check method</div>
-    <p class="mode-help">Fetch from DNS, paste a TXT record, or extract the lookup name from a DKIM-Signature header.</p>
+    <p class="mode-help">Check a published DNS record, validate a record value before publication, or extract the lookup name from a DKIM-Signature header.</p>
 
     <div class="tabs" role="tablist" aria-label="Check method">
       <button id="tabDns" class="tab active" role="tab" aria-selected="true">
@@ -22,8 +22,8 @@
         <span class="tab-sub">Fetch from DNS</span>
       </button>
       <button id="tabTxt" class="tab" role="tab" aria-selected="false">
-        <span class="tab-title">TXT Record</span>
-        <span class="tab-sub">Check direct TXT input</span>
+        <span class="tab-title">Record Value</span>
+        <span class="tab-sub">Validate before DNS publication</span>
       </button>
       <button id="tabSignature" class="tab" role="tab" aria-selected="false">
         <span class="tab-title">DKIM-Signature</span>
@@ -52,14 +52,14 @@
         <p id="customDohHelp" class="mode-help">Must support RFC 8484 GET requests using DNS wire format. Do not include credentials or other sensitive information in the URL.</p>
       </div>
       <br><button id="dnsCheck">Lookup &amp; Validate</button>
-      <p class="note">Queries the selected DNS resolver using RFC 8484 DNS over HTTPS (wire format). The requested FQDN is sent to that resolver.<br>If direct DoH access is unavailable, use TXT Record mode with output from your local DNS tools.</p>
+      <p class="note">Checks a record after DNS publication. Queries the selected resolver using RFC 8484 DNS over HTTPS (wire format); the requested FQDN is sent to that resolver.</p>
     </section>
 
     <section id="txtMode" class="mode-panel hidden">
-      <label class="field-label" for="txtInput">DKIM TXT Record</label>
+      <label class="field-label" for="txtInput">DKIM Key Record Value</label>
       <textarea id="txtInput" placeholder='"v=DKIM1; k=rsa; "&#10;"p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A..."'></textarea>
       <button id="txtCheck">Validate</button>
-      <p class="note">No DNS query is made. The input is processed only in your browser and is not sent to an external service. DNS-level properties such as TXT RR count and DNSSEC are not available in this mode.</p>
+      <p class="note">Validates an RFC 1035/BIND-compatible TXT value before DNS publication. Enter one or more quoted character-strings to check their 255-octet limits and joined DKIM value. Do not include an owner name, TTL, or record type. No DNS query is made.</p>
     </section>
 
     <section id="signatureMode" class="mode-panel hidden">
