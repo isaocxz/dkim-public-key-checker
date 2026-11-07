@@ -3,9 +3,27 @@ const DEPRECATED_DKIM_TAGS = new Set(["g"]);
 const DKIM_TAG_NAME_RE = /^[A-Za-z][A-Za-z0-9_]*$/;
 const HYPHENATED_WORD_RE = /^[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/;
 
+// RFC 6376 FWS is made from SP/HTAB, optionally folded as CRLF followed by
+// SP/HTAB. Textareas normalize CRLF to LF, so accept that browser form too.
+// Generic whitespace classes also include characters such as NBSP, which
+// must remain visible to the DKIM syntax validators.
+const RFC_FWS_RE = /(?:[ \t]*\r?\n)?[ \t]+/g;
+const LEADING_RFC_FWS_RE = /^(?:(?:[ \t]*\r?\n)?[ \t]+)+/;
+const TRAILING_RFC_FWS_RE = /(?:(?:[ \t]*\r?\n)?[ \t]+)+$/;
+
+function trimRfcFws(value) {
+  return value
+    .replace(LEADING_RFC_FWS_RE, "")
+    .replace(TRAILING_RFC_FWS_RE, "");
+}
+
+function removeRfcFws(value) {
+  return value.replace(RFC_FWS_RE, "");
+}
+
 /* Parse quoted TXT character-strings from pasted tool output. */
 function txtPresentationInfo(raw) {
-  const text = String(raw ?? "").trim();
+  const text = trimRfcFws(String(raw ?? ""));
   const chunks = [];
   const re = /"((?:\\.|[^"\\])*)"/g;
   let match;
@@ -33,7 +51,7 @@ function countPChunks(chunks) {
   // safe: the Base64 alphabet (A-Za-z0-9+/=) never contains ";", so it
   // cannot appear inside a well-formed p= value.
   const logical = chunks.join("");
-  const tagMatch = /(?:^|;)\s*p\s*=/.exec(logical);
+  const tagMatch = /(?:^|;)(?:(?:[ \t]*\r?\n)?[ \t]+)*p(?:(?:[ \t]*\r?\n)?[ \t]+)*=/.exec(logical);
   if (!tagMatch) {
     return 0;
   }
@@ -67,7 +85,8 @@ function parseTags(record) {
   const parts = logical.split(";");
   for (let partIndex = 0; partIndex < parts.length; partIndex++) {
     const part = parts[partIndex];
-    if (!part.trim()) {
+    const trimmedPart = trimRfcFws(part);
+    if (!trimmedPart) {
       // RFC 6376 permits one optional trailing semicolon, but an empty
       // tag-spec anywhere else is not part of the tag-list grammar.
       // This looks like a loose approximation but is exact: the last
@@ -86,26 +105,26 @@ function parseTags(record) {
       }
       continue;
     }
-    const equalsIndex = part.indexOf("=");
+    const equalsIndex = trimmedPart.indexOf("=");
 
     if (equalsIndex < 0) {
-      fields.push({name:null, value:null, raw:part.trim(), malformed:true});
+      fields.push({name:null, value:null, raw:trimmedPart, malformed:true});
       continue;
     }
 
     // RFC 6376 tag names are case-sensitive. Preserve the original spelling
     // so that, for example, P= is an unknown tag rather than the required p=.
-    const key = part.slice(0,equalsIndex).trim();
-    const value = part.slice(equalsIndex+1).trim();
+    const key = trimRfcFws(trimmedPart.slice(0,equalsIndex));
+    const value = trimRfcFws(trimmedPart.slice(equalsIndex+1));
 
     // RFC 6376 Section 3.2:
     // tag-name = ALPHA *ALNUMPUNC; ALNUMPUNC = ALPHA / DIGIT / "_"
     if (!DKIM_TAG_NAME_RE.test(key)) {
-      fields.push({name:key, value, raw:part.trim(), malformed:true});
+      fields.push({name:key, value, raw:trimmedPart, malformed:true});
       continue;
     }
 
-    fields.push({name:key, value, raw:part.trim(), malformed:false});
+    fields.push({name:key, value, raw:trimmedPart, malformed:false});
 
     if (Object.prototype.hasOwnProperty.call(tags,key)) {
       duplicates.push(key);
@@ -124,7 +143,7 @@ function extractP(record) {
     return {state:"missing", p:null, info};
   }
 
-  const p = info.tags.p.replace(/\s+/g, "");
+  const p = removeRfcFws(info.tags.p);
   if (p === "") {
     return {state:"revoked", p:"", info};
   }
@@ -188,7 +207,7 @@ function bytesToBigInt(bytes) {
  * rejected instead of silently discarded.
  */
 function parseColonTokenList(value, {allowAsterisk=false}={}) {
-  const values = value.split(":").map(item => item.trim());
+  const values = value.split(":").map(item => trimRfcFws(item));
   const hasEmptyItem = values.some(item => item === "");
   const invalid = values.filter(item => {
     if (item === "") {

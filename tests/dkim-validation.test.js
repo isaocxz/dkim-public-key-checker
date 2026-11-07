@@ -82,6 +82,32 @@ describe("DKIM tag parsing", () => {
 
     expect(result.fields.some(field => field.malformed)).toBe(true);
   });
+
+  test.each(["\r\n", "\n"])(
+    "accepts RFC FWS with %j line endings around tags and within p= Base64",
+    lineBreak => {
+      const record = `\tv \t= ${lineBreak}\tDKIM1; ${lineBreak}\tp \t= QUFB ${lineBreak}\tQQ==\t`;
+      const result = extractP(record);
+
+      expect(result.state).toBe("present");
+      expect(result.info.tags.v).toBe("DKIM1");
+      expect(result.p).toBe("QUFBQQ==");
+    }
+  );
+
+  test("does not remove non-breaking space from p= Base64", () => {
+    const result = extractP("v=DKIM1; p=QUFB\u00A0QQ==");
+
+    expect(result.p).toBe("QUFB\u00A0QQ==");
+    expect(decodeBase64Strict(result.p).ok).toBe(false);
+  });
+
+  test("does not treat non-breaking space as FWS in tag syntax", () => {
+    const result = parseTags("v=DKIM1;\u00A0p=AAAA");
+
+    expect(result.tags.p).toBeUndefined();
+    expect(result.fields.some(field => field.malformed)).toBe(true);
+  });
 });
 
 describe("RFC 6376 validation", () => {
