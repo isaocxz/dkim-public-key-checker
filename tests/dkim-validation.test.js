@@ -379,6 +379,34 @@ describe("quoted-printable notes", () => {
     expect(validateNotesTagValue("note=3Bexample").ok).toBe(true);
   });
 
+  test("accepts a literal backslash as a safe character", () => {
+    expect(validateNotesTagValue("hello\\world").ok).toBe(true);
+  });
+
+  test("accepts encoded CRLF octets", () => {
+    expect(validateNotesTagValue("hello=0D=0Aworld").ok).toBe(true);
+  });
+
+  test("rejects an equals sign without a hexadecimal octet", () => {
+    expect(validateNotesTagValue("hello=").ok).toBe(false);
+  });
+
+  test("decodes a DNS presentation backslash before validating n=", () => {
+    const parsed = parseTxtRecordValue('"v=DKIM1; n=hello\\\\world; p=AAAA"');
+    const info = parseTags(parsed.logical, parsed.chunks, parsed.chunkOctets);
+
+    expect(info.tags.n).toBe("hello\\world");
+    expect(validateNotesTagValue(info.tags.n).ok).toBe(true);
+  });
+
+  test("does not treat an encoded semicolon as a tag separator", () => {
+    const info = parseTags("v=DKIM1; n=hello=3Bworld; p=AAAA");
+
+    expect(info.tags.n).toBe("hello=3Bworld");
+    expect(info.tags.p).toBe("AAAA");
+    expect(validateNotesTagValue(info.tags.n).ok).toBe(true);
+  });
+
   test("accepts the characters adjacent to the excluded semicolon", () => {
     expect(validateNotesTagValue(":<").ok).toBe(true);
   });
